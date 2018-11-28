@@ -1,0 +1,12 @@
+{
+  "name": "jpeg-remote",
+  "version": "1.0.0",
+  "description": "some dumb thing i made",
+  "main": "index.js",
+  "author": "nox",
+  "dependencies": {
+    "puppeteer": "^1.10.0",
+    "url-parse": "^1.4.4",
+    "ws": "^6.1.2"
+  }
+}
