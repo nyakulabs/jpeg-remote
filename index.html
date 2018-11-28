@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>blindfold</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            #view {
+                margin: 0px 0px 0px 0px;
+                padding: 0px;
+                user-select: none;
+                -moz-user-select: none;
+                -webkit-user-drag: none;
+                -webkit-user-select: none;
+                -ms-user-select: none;
+            }
+
+            body {
+                margin: 0;
+                text-align: center;
+            }
+        </style>
+    </head>
+    <body>
+        <canvas id="view" width="1280" height="720"></canvas><br>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.slim.js"></script>
+        <script>
+            console.log('starting');
+
+            const connection = new WebSocket('ws://localhost:3822');
+
+            const view = document.getElementById('view');
+            var ctx = view.getContext('2d');
+
+            var mouse = {
+                'x': 0,
+                'y': 0
+            }
+
+            view.onmousemove = async (e) => { 
+                var rect = e.target.getBoundingClientRect();
+                var x = e.clientX - rect.left; //x position within the element.
+                var y = e.clientY - rect.top;  //y position within the element.
+                send(JSON.stringify({
+                    'type': 'move',
+                    'posX': x,
+                    'posY': y
+                }))
+            }
+
+            view.onclick = async (e) => {  
+                var rect = e.target.getBoundingClientRect();
+                var x = e.clientX - rect.left; //x position within the element.
+                var y = e.clientY - rect.top;  //y position within the element.
+                if (e.button == 1) {
+                    send(JSON.stringify({
+                        'type': 'middle',
+                        'posX': x,
+                        'posY': y
+                    }))
+                }
+                send(JSON.stringify({
+                    'type': 'click',
+                    'posX': x,
+                    'posY': y
+                }))
+            }
+
+            document.onkeypress = async (e) => {
+                send(JSON.stringify({
+                    'type': 'key',
+                    'key': e.key
+                }))
+            }
+
+            // prevent all backspace from going back a page
+            document.onkeydown = function (event) {  
+                var keyCode = event.keyCode;
+                
+                // simple way of checking for 
+                if (keyCode == 8) {
+                    send(JSON.stringify({
+                        'type': 'key',
+                        'key': 'Backspace'
+                    }))
+                }
+
+                if (keyCode == 8 && 
+                    ((event.target || event.srcElement).tagName != "TEXTAREA") && 
+                    ((event.target || event.srcElement).tagName != "INPUT")) { 
+                    
+                    if (navigator.userAgent.toLowerCase().indexOf("msie") == -1) {
+                        event.stopPropagation();
+                    } else {
+                        event.returnValue = false;
+                    }
+                }
+            };	
+
+            // mouse wheel
+            view.onwheel = async (e) => {
+                console.log(e.deltaY);
+                send(JSON.stringify({
+                    'type': 'scroll',
+                    'x': e.clientX,
+                    'y': e.clientY,
+                    'ys': e.deltaY
+                }))
+            }
+
+            function send(data) {
+                if (connection.readyState === WebSocket.OPEN) {
+                    connection.send(data);
+                } else {
+                    throw 'not connected';
+                }
+            }
+
+            connection.addEventListener('open', () => {
+                console.log('connected');
+            });
+
+            connection.addEventListener('message', e => {
+                let img = new Image;
+                img.onload = function(){
+                    ctx.drawImage(img,0,0); // Or at whatever offset you like
+                };
+                img.src = ' data:image/jpeg;base64,' + e.data;
+            });
+
+            urlbar.addEventListener('keypress', e => {
+                let kc = e.which || e.keyCode;
+
+                if (kc === 13) {
+                    send(JSON.stringify({
+                        'type': 'url',
+                        'url': urlbar.value
+                    }));
+                }
+            })
+        </script>
+    </body>
+</html>
